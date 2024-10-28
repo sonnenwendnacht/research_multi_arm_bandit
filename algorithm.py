@@ -78,6 +78,10 @@ class Algorithm2:
         self.chosen_arm_index = None
         self.scores = []  # To store scores for each arm
         self.explore_limit = explore_limit
+        
+        self.arms_history = []  # List to store the sequence of arms selected
+        self.rewards_history = []  # List to store the rewards obtained
+        self.total_pulls_done = 0  # Keep track of total pulls
 
     def update_mean_estimate(self, arm_index, reward):
         # Efficiently update the mean estimate using incremental formula
@@ -157,7 +161,8 @@ class Algorithm2:
                 pull_number = self.n_pulls[i]
                 ucb = math.sqrt(4 * math.log(total_pulls_done + 1) / pull_number) if pull_number > 0 else float('inf')
 
-                remaining_percentage = remaining_pulls / pull_number if pull_number > 0 else 0.0
+                remaining_percentage_inv = remaining_pulls / pull_number if pull_number > 0 else 0.0
+                remaining_percentage = 1/(remaining_pulls+1 / pull_number) if pull_number > 0 else 0.0
 
                 # Initialize other features to zero
                 other_cost1 = 0.0
@@ -189,9 +194,13 @@ class Algorithm2:
                 pull_number2 = 0.0
                 ucb2 = 0.0
                 remaining_percentage2 = 0.0
+                
+                in_set1 = 1 if sample_mean >= reward_threshold else 0
+                in_set2 = 1 if sample_mean + ucb >= reward_threshold else 0
 
                 # **Compute other_cost1 and associated features**
                 # Find the cheapest other arm (excluding current arm i) with sample_mean >= threshold
+                '''
                 feasible_arms1 = [
                     j for j in range(self.num_arms)
                     if j != i and self.means_estimates[j] >= reward_threshold
@@ -213,7 +222,8 @@ class Algorithm2:
                     reward_overflow_percentage_exp1 = math.exp(reward_overflow_percentage1)
                     pull_number1 = self.n_pulls[cheapest_arm1]
                     ucb1 = math.sqrt(4 * math.log(total_pulls_done + 1) / pull_number1) if pull_number1 > 0 else 0
-                    remaining_percentage1 = remaining_pulls / pull_number1 if pull_number1 > 0 else 0.0
+                    remaining_percentage1_inv = remaining_pulls / pull_number1 if pull_number1 > 0 else 0.0
+                    remaining_percentage1 = 1/(remaining_pulls+1 / pull_number1) if pull_number1 > 0 else 0.0
 
                 # **Compute other_cost2 and associated features**
                 # Find the cheapest other arm (excluding current arm i) with sample_mean + ucb >= threshold
@@ -243,14 +253,15 @@ class Algorithm2:
                     reward_overflow_percentage_exp2 = math.exp(reward_overflow_percentage2)
                     pull_number2 = self.n_pulls[cheapest_arm2]
                     ucb2 = math.sqrt(4 * math.log(total_pulls_done + 1) / pull_number2) if pull_number2 > 0 else 0
-                    remaining_percentage2 = remaining_pulls / pull_number2 if pull_number2 > 0 else 0.0
-                    
+                    remaining_percentage2_inv = remaining_pulls / pull_number2 if pull_number2 > 0 else 0.0
+                    remaining_percentage2 = 1/(remaining_pulls+1 / pull_number2) if pull_number2 > 0 else 0.0
+                '''
 
                 zero = 0  # Placeholder if needed
 
                 # Create the feature vector
                 features_i = [
-                    reward_threshold,
+                    
                     sample_mean,
                     sample_variance,
                     sample_median,
@@ -272,36 +283,13 @@ class Algorithm2:
 
                     remaining_pulls,
                     remaining_percentage,
+                    remaining_percentage_inv,
 
-                    other_cost1,
-                    exist1,
-                    sample_mean1,
-                    missing_reward1,
-                    missing_reward_percentage1,
-                    missing_reward_percentage_log1,
-                    missing_reward_percentage_exp1,
-                    reward_overflow1,
-                    reward_overflow_percentage1,
-                    reward_overflow_percentage_log1,
-                    reward_overflow_percentage_exp1,
-                    pull_number1,
-                    ucb1,
-                    remaining_percentage1,
 
-                    other_cost2,
-                    exist2,
-                    sample_mean2,
-                    missing_reward2,
-                    missing_reward_percentage2,
-                    missing_reward_percentage_log2,
-                    missing_reward_percentage_exp2,
-                    reward_overflow2,
-                    reward_overflow_percentage2,
-                    reward_overflow_percentage_log2,
-                    reward_overflow_percentage_exp2,
-                    pull_number2,
-                    ucb2,
-                    remaining_percentage2,
+                    
+                    
+                    in_set1,
+                    in_set2,
 
                     zero
                 ]
@@ -322,11 +310,13 @@ class Algorithm2:
             self.pulling_history[self.chosen_arm_index].append(reward)
             self.update_mean_estimate(self.chosen_arm_index, reward)
 
+            # Record history
+            self.arms_history.append(self.chosen_arm_index)
+            self.rewards_history.append(reward)
+
             # Update total pulls done
             total_pulls_done += 1
-
-        # Final update of scores after exploitation (optional)
-        # You can include this if needed
+            self.total_pulls_done = total_pulls_done
 
     # Getter methods for reporting
     def get_estimated_means(self):
@@ -340,7 +330,15 @@ class Algorithm2:
 
     def get_scores(self):
         return self.scores
+    
+    
+    
+    
+    def get_arms_history(self):
+        return self.arms_history
 
+    def get_rewards_history(self):
+        return self.rewards_history
 
 
 class Algorithm3:
