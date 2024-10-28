@@ -244,6 +244,7 @@ class Algorithm2:
                     pull_number2 = self.n_pulls[cheapest_arm2]
                     ucb2 = math.sqrt(4 * math.log(total_pulls_done + 1) / pull_number2) if pull_number2 > 0 else 0
                     remaining_percentage2 = remaining_pulls / pull_number2 if pull_number2 > 0 else 0.0
+                    
 
                 zero = 0  # Placeholder if needed
 
@@ -339,3 +340,78 @@ class Algorithm2:
 
     def get_scores(self):
         return self.scores
+
+
+
+class Algorithm3:
+    def __init__(self, env, time_horizon):
+        self.env = env  # The environment instance
+        self.time_horizon = time_horizon  # Total time horizon
+        self.num_arms = env.get_num_arms()
+        self.costs = env.get_costs()
+        self.threshold = env.get_threshold()
+        self.means_estimates = np.zeros(self.num_arms)  # Estimated means
+        self.n_pulls = np.zeros(self.num_arms, dtype=int)  # Number of times each arm was pulled
+        self.arms_history = []  # List of arms pulled
+        self.rewards_history = []  # List of rewards obtained
+        self.total_pulls_done = 0
+
+    def run(self):
+        T = self.time_horizon
+        K = self.num_arms
+
+        # **Exploration phase:** Pull each arm once
+        for i in range(K):
+            reward = self.env.pull_arm(i)
+            self.n_pulls[i] += 1
+            self.means_estimates[i] = reward  # Since pulled once
+            self.arms_history.append(i)
+            self.rewards_history.append(reward)
+            self.total_pulls_done += 1
+
+        # **Exploitation phase:**
+        for t in range(K, T):
+            # For each arm, compute empirical mean and UCB
+            ucb_values = np.zeros(K)
+            for i in range(K):
+                n_i = self.n_pulls[i]
+                mu_i = self.means_estimates[i]
+                confidence = math.sqrt((2 * math.log(T)) / n_i)
+                ucb_i = mu_i + confidence
+                ucb_values[i] = ucb_i
+
+            # Construct Feasible Set: Arms with UCB >= threshold
+            feasible_arms = [i for i in range(K) if ucb_values[i] >= self.threshold]
+
+            if feasible_arms:
+                # Select the cheapest arm among feasible arms
+                It = min(feasible_arms, key=lambda i: self.costs[i])
+            else:
+                # If no feasible arms, select the arm with the highest UCB
+                It = np.argmax(ucb_values)
+
+            # Pull arm It
+            reward = self.env.pull_arm(It)
+            self.n_pulls[It] += 1
+            # Update mean estimate using incremental formula
+            n = self.n_pulls[It]
+            old_mean = self.means_estimates[It]
+            self.means_estimates[It] += (reward - old_mean) / n
+
+            # Record history
+            self.arms_history.append(It)
+            self.rewards_history.append(reward)
+            self.total_pulls_done += 1
+
+    # Getter methods for reporting
+    def get_estimated_means(self):
+        return self.means_estimates
+
+    def get_n_pulls(self):
+        return self.n_pulls
+
+    def get_arms_history(self):
+        return self.arms_history
+
+    def get_rewards_history(self):
+        return self.rewards_history

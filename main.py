@@ -9,7 +9,7 @@ import re
 
 def main():
     # Initialize variables
-    T = 1000  # Time horizon
+    T = 500000  # Time horizon
     param_range = (-100, 100)
     # Regularization parameter
     lambda_reg = 0.0001  # Adjust as needed 
@@ -93,7 +93,7 @@ def main():
     save_file = f'best_hyperparameters_{x}.pkl'  # Added .pkl extension for consistency
 
     # Prompt the user to select the algorithm or delete saved data
-    algo_choice = input("Enter which algorithm to run (1 or 2), or type 'DELETE' to remove saved hyperparameters: ").strip()
+    algo_choice = input("Enter which algorithm to run (1 or 2 or 3), or type 'DELETE' to remove saved hyperparameters: ").strip()
 
     if algo_choice == 'DELETE':
         confirmation = input(f"Are you sure you want to delete the saved best hyperparameters for file_{x}? Type 'CONTINUE DELETE' to proceed: ").strip()
@@ -107,7 +107,7 @@ def main():
             print("Deletion cancelled.")
         sys.exit()
 
-    elif algo_choice not in ['1', '2']:
+    elif algo_choice not in ['1', '2', '3']:
         print("Invalid choice. Exiting.")
         sys.exit()
 
@@ -125,6 +125,27 @@ def main():
         # Output results
         print(f"\nAlgorithm selected arm: {alg.get_chosen_arm()}")
         print(f"Estimated means: {alg.get_estimated_means()}")
+        print(f"Number of pulls per arm: {alg.get_n_pulls()}")
+        print(f"Total quality regret: {quality_regret}")
+        print(f"Total cost regret: {cost_regret}")
+        
+    elif algo_choice== '3':
+        # Initialize the environment
+        env = settings.Environment(filename=filename)
+
+        # Initialize and run Algorithm3
+        alg = algorithm.Algorithm3(env=env, time_horizon=T)
+        alg.run()
+
+        # After the algorithm has run, calculate regrets
+        quality_regret, cost_regret = env.calculate_regret()
+
+        # Output results
+        print(f"\nAlgorithm3 (UCB) selected arms:")
+        for t, arm in enumerate(alg.get_arms_history(), 1):
+            print(f"Time {t}: Pulled arm {arm}, Reward: {alg.get_rewards_history()[t-1]}")
+
+        print(f"\nEstimated means: {alg.get_estimated_means()}")
         print(f"Number of pulls per arm: {alg.get_n_pulls()}")
         print(f"Total quality regret: {quality_regret}")
         print(f"Total cost regret: {cost_regret}")
