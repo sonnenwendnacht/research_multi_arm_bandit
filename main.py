@@ -18,27 +18,27 @@ def main():
     feature_names = [
         
         "sample_mean",
-        "sample_variance",
-        "sample_median",
-        "sample_max",
-        "sample_min",
+        #"sample_variance",
+        #"sample_median",
+        #"sample_max",
+        #"sample_min",
         "cost_i",
-        "missing_reward",
+        #"missing_reward",
         "missing_reward_percentage",
-        "missing_reward_percentage_log",
-        "missing_reward_percentage_exp",
-        "reward_overflow",
+        #"missing_reward_percentage_log",
+        #"missing_reward_percentage_exp",
+        #"reward_overflow",
         "reward_overflow_percentage",
-        "reward_overflow_percentage_log",
-        "reward_overflow_percentage_exp",
+        #"reward_overflow_percentage_log",
+        #"reward_overflow_percentage_exp",
         "pull_number",
         "ucb",
         "remaining_pulls",
-        "remaining_percentage",
-        "remaining_percentage_inv",
+        #"remaining_percentage",
+        #"remaining_percentage_inv",
         "in_set1",
-        "in_set2",
-        "zero"
+        "in_set2"
+        
     ]
 
     # Check for command-line arguments

@@ -82,6 +82,9 @@ class Algorithm2:
         self.arms_history = []  # List to store the sequence of arms selected
         self.rewards_history = []  # List to store the rewards obtained
         self.total_pulls_done = 0  # Keep track of total pulls
+        
+        
+
 
     def update_mean_estimate(self, arm_index, reward):
         # Efficiently update the mean estimate using incremental formula
@@ -141,10 +144,10 @@ class Algorithm2:
             for i in range(self.num_arms):
                 # Extract features for arm i
                 sample_mean = self.means_estimates[i]
-                sample_variance = np.var(self.pulling_history[i], ddof=1) if self.n_pulls[i] > 1 else 0.0
-                sample_median = np.median(self.pulling_history[i])
-                sample_max = np.max(self.pulling_history[i])
-                sample_min = np.min(self.pulling_history[i])
+                #sample_variance = np.var(self.pulling_history[i], ddof=1) if self.n_pulls[i] > 1 else 0.0
+                #sample_median = np.median(self.pulling_history[i])
+                #sample_max = np.max(self.pulling_history[i])
+                #sample_min = np.min(self.pulling_history[i])
                 cost_i = self.costs[i]
                 reward_threshold = self.threshold  # Same for all arms
 
@@ -263,35 +266,35 @@ class Algorithm2:
                 features_i = [
                     
                     sample_mean,
-                    sample_variance,
-                    sample_median,
-                    sample_max,
-                    sample_min,
+                    #sample_variance,
+                    #sample_median,
+                    #sample_max,
+                    #sample_min,
                     cost_i,
 
-                    missing_reward,
+                    #missing_reward,
                     missing_reward_percentage,
-                    missing_reward_percentage_log,
-                    missing_reward_percentage_exp,
-                    reward_overflow,
+                    #missing_reward_percentage_log,
+                    #missing_reward_percentage_exp,
+                    #reward_overflow,
                     reward_overflow_percentage,
-                    reward_overflow_percentage_log,
-                    reward_overflow_percentage_exp,
+                    #reward_overflow_percentage_log,
+                    #reward_overflow_percentage_exp,
 
                     pull_number,
                     ucb,
 
                     remaining_pulls,
-                    remaining_percentage,
-                    remaining_percentage_inv,
+                    #remaining_percentage,
+                    #remaining_percentage_inv,
 
 
                     
                     
                     in_set1,
-                    in_set2,
+                    in_set2
 
-                    zero
+                    
                 ]
 
                 # Calculate the score for arm i
