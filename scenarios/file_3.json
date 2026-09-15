@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "laptop_file_3",
+  "threshold": 500.0,
+  "arms": [
+    {"mean": 499.9, "cost": 0.0, "std": 1.0},
+    {"mean": 1.0, "cost": 200.0, "std": 1.0},
+    {"mean": 500.1, "cost": 50.0, "std": 1.0},
+    {"mean": 450.0, "cost": 150.0, "std": 1.0},
+    {"mean": 700.0, "cost": 100.0, "std": 1.0}
+  ]
+}

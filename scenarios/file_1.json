@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "historical_file_1",
+  "threshold": 0.5,
+  "arms": [
+    {"mean": 0.4, "cost": 1.0, "std": 1.0},
+    {"mean": 0.6, "cost": 2.0, "std": 1.0},
+    {"mean": 0.55, "cost": 0.5, "std": 1.0},
+    {"mean": 0.45, "cost": 1.5, "std": 1.0},
+    {"mean": 0.4999, "cost": 1.0, "std": 1.0}
+  ]
+}
