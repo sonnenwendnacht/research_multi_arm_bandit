@@ -1,5 +1,5 @@
 import importlib.util
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 import io
 import json
 from pathlib import Path
@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from bandit_cost_quality.cli import load_json, main
-from bandit_cost_quality.experiments import canonical_hash, compare, statistics
+from bandit_cost_quality.experiments import canonical_hash, compare, plot_comparison, statistics
 from bandit_cost_quality.simulator import Scenario, default_policies
 from bandit_cost_quality.tuning import tune
 
@@ -113,6 +113,116 @@ class ExperimentTests(unittest.TestCase):
             plotter.assert_not_called()
             self.assertFalse(output.exists())
             self.assertFalse(plot.exists())
+
+    def test_extensionless_plot_preserves_existing_actual_target_before_computation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            existing = root / "figure.png"
+            existing.write_bytes(b"existing plot")
+            output = root / "result.json"
+            args = ["compare", "--scenario", str(ROOT / "scenarios/file_1.json"),
+                    "--output", str(output), "--plot", str(root / "figure")]
+            with patch("bandit_cost_quality.cli.compare") as comparison, \
+                    redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+                main(args)
+            self.assertEqual(raised.exception.code, 2)
+            comparison.assert_not_called()
+            self.assertEqual(existing.read_bytes(), b"existing plot")
+            self.assertFalse(output.exists())
+
+    def test_normalized_json_plot_alias_rejected_before_computation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args = ["compare", "--scenario", str(ROOT / "scenarios/file_1.json"),
+                    "--output", str(root / "figure.png"), "--plot", str(root / "figure")]
+            with patch("bandit_cost_quality.cli.compare") as comparison, \
+                    redirect_stderr(io.StringIO()) as errors, self.assertRaises(SystemExit) as raised:
+                main(args)
+            self.assertEqual(raised.exception.code, 2)
+            self.assertIn("different paths", errors.getvalue())
+            comparison.assert_not_called()
+            self.assertEqual(list(root.iterdir()), [])
+
+    def test_direct_plot_preserves_existing_target_with_or_without_extension(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            existing = root / "figure.png"
+            existing.write_bytes(b"existing plot")
+            for target in (existing, root / "figure"):
+                with self.subTest(target=target), self.assertRaises(FileExistsError):
+                    plot_comparison({}, target)
+                self.assertEqual(existing.read_bytes(), b"existing plot")
+
+    def test_output_symlinks_are_preserved_before_computation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            missing = root / "missing.png"
+            link = root / "figure.png"
+            link.symlink_to(missing)
+            with self.assertRaises(FileExistsError):
+                plot_comparison({}, root / "figure")
+            self.assertTrue(link.is_symlink())
+            self.assertFalse(missing.exists())
+            for outputs in (("--output", str(link)),
+                            ("--output", str(root / "result.json"), "--plot", str(root / "figure"))):
+                with self.subTest(outputs=outputs), patch("bandit_cost_quality.cli.compare") as comparison, \
+                        redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+                    main(["compare", "--scenario", str(ROOT / "scenarios/file_1.json"), *outputs])
+                self.assertEqual(raised.exception.code, 2)
+                comparison.assert_not_called()
+                self.assertTrue(link.is_symlink())
+                self.assertFalse(missing.exists())
+            self.assertFalse((root / "result.json").exists())
+
+    @unittest.skipUnless(importlib.util.find_spec("matplotlib"), "optional plotting dependency not installed")
+    def test_extensionless_plot_success_uses_explicit_png_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "result.json"
+            args = ["compare", "--scenario", str(ROOT / "scenarios/file_1.json"),
+                    "--horizon", "2", "--seeds", "0", "--output", str(output),
+                    "--plot", str(root / "figure")]
+            with redirect_stdout(io.StringIO()):
+                main(args)
+            self.assertTrue((root / "figure.png").read_bytes().startswith(b"\x89PNG"))
+            self.assertFalse((root / "figure").exists())
+            self.assertEqual(json.loads(output.read_text())["horizon"], 2)
+
+    @unittest.skipUnless(importlib.util.find_spec("matplotlib"), "optional plotting dependency not installed")
+    def test_direct_plot_preserves_explicit_formats_and_extension_case(self):
+        result = compare(self.scenario, 2, [0], default_policies())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for suffix, header in ((".PNG", b"\x89PNG"), (".svg", b"<?xml"), (".pdf", b"%PDF")):
+                output = root / ("figure" + suffix)
+                with self.subTest(suffix=suffix):
+                    self.assertEqual(plot_comparison(result, output), output)
+                    self.assertTrue(output.read_bytes().startswith(header))
+
+    @unittest.skipUnless(importlib.util.find_spec("matplotlib"), "optional plotting dependency not installed")
+    def test_unsupported_plot_format_creates_no_outputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            unsupported = root / "figure.unsupported"
+            with self.assertRaisesRegex(ValueError, "unsupported plot format"):
+                plot_comparison({}, unsupported)
+            args = ["compare", "--scenario", str(ROOT / "scenarios/file_1.json"),
+                    "--output", str(root / "result.json"), "--plot", str(unsupported)]
+            with patch("bandit_cost_quality.cli.compare") as comparison, \
+                    redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                main(args)
+            comparison.assert_not_called()
+            self.assertEqual(list(root.iterdir()), [])
+
+    @unittest.skipUnless(importlib.util.find_spec("matplotlib"), "optional plotting dependency not installed")
+    def test_plot_renderer_failure_leaves_no_empty_file(self):
+        result = compare(self.scenario, 2, [0], default_policies())
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "figure.png"
+            with patch("matplotlib.figure.Figure.savefig", side_effect=ValueError("renderer failed")), \
+                    self.assertRaisesRegex(ValueError, "renderer failed"):
+                plot_comparison(result, output)
+            self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

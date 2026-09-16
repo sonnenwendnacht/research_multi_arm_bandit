@@ -22,6 +22,14 @@ The default comparison uses seeds 0–19. Set `--seeds 3 4 5` to choose them exp
 
 For plots, install `python -m pip install -e '.[plot]'` and add `--plot results/comparison.png`. A tested Python 3.12 dependency snapshot is provided in [requirements-repro.txt](requirements-repro.txt).
 
+An extensionless plot path such as `--plot results/comparison` explicitly writes
+`results/comparison.png`. Existing plots (including symlinks) and JSON/plot
+destination collisions are rejected before the experiment runs. The plotting
+API also uses exclusive file creation, so it does not overwrite an existing
+destination that appears while a figure is rendering. Rendering failures leave
+no empty plot file. This September 16 maintenance fixes a previously missed
+extensionless-filename overwrite case; the policy calculations are unchanged.
+
 ## What is being measured?
 
 Each arm has a known cost `c_i` and unknown Gaussian reward mean `mu_i`. The quality threshold `tau` is known. The reference arm is the cheapest arm with `mu_i >= tau`; the simulator requires at least one such arm. Policies use observed rewards, costs, and the threshold. They never use the true means for action selection.

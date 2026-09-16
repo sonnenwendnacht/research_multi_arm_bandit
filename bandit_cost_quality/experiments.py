@@ -2,6 +2,7 @@
 
 import hashlib
 from importlib import metadata
+import io
 import json
 from pathlib import Path
 import platform
@@ -117,7 +118,27 @@ def compare(scenario, horizon, seeds, policies):
             "paired_differences": {"reference": baseline, "definition": "policy minus reference", "policies": paired}}
 
 
+def normalize_plot_path(output):
+    """Make Matplotlib's default PNG suffix explicit before checking destinations."""
+    output = Path(output)
+    return output if output.suffix else output.with_suffix(".png")
+
+
+def validate_plot_path(output):
+    output = normalize_plot_path(output)
+    if output.exists() or output.is_symlink():
+        raise FileExistsError(f"plot output already exists: {output}")
+    try:
+        from matplotlib.backend_bases import FigureCanvasBase
+    except ImportError as error:
+        raise ValueError("plotting requires installation with the [plot] extra") from error
+    if output.suffix[1:].lower() not in FigureCanvasBase.get_supported_filetypes():
+        raise ValueError(f"unsupported plot format: {output.suffix}")
+    return output
+
+
 def plot_comparison(result, output):
+    output = validate_plot_path(output)
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -125,18 +146,25 @@ def plot_comparison(result, output):
     except ImportError as error:
         raise ValueError("plotting requires installation with the [plot] extra") from error
     fig, axes = plt.subplots(1, 2, figsize=(11, 4))
-    for name, aggregate in result["aggregates"].items():
-        curves = aggregate["curves"]
-        for axis, metric in zip(axes, ("quality", "cost")):
-            mean = np.asarray(curves[metric]["mean"])
-            axis.plot(curves["pulls"], mean, label=name)
-            if curves[metric]["standard_error"] is not None:
-                se = np.asarray(curves[metric]["standard_error"])
-                axis.fill_between(curves["pulls"], mean - se, mean + se, alpha=0.15)
-            axis.set(xlabel="Pulls", ylabel=f"Cumulative {metric} pseudo-regret")
-            axis.grid(alpha=0.25)
-    axes[0].legend(fontsize=8)
-    fig.suptitle(f"{result['scenario']['name']}: {len(result['seeds'])} seeds; mean ± one standard error")
-    fig.tight_layout()
-    fig.savefig(output, dpi=150)
-    plt.close(fig)
+    try:
+        for name, aggregate in result["aggregates"].items():
+            curves = aggregate["curves"]
+            for axis, metric in zip(axes, ("quality", "cost")):
+                mean = np.asarray(curves[metric]["mean"])
+                axis.plot(curves["pulls"], mean, label=name)
+                if curves[metric]["standard_error"] is not None:
+                    se = np.asarray(curves[metric]["standard_error"])
+                    axis.fill_between(curves["pulls"], mean - se, mean + se, alpha=0.15)
+                axis.set(xlabel="Pulls", ylabel=f"Cumulative {metric} pseudo-regret")
+                axis.grid(alpha=0.25)
+        axes[0].legend(fontsize=8)
+        fig.suptitle(f"{result['scenario']['name']}: {len(result['seeds'])} seeds; mean ± one standard error")
+        fig.tight_layout()
+        # Render before creating a destination: renderer failures leave no empty file.
+        with io.BytesIO() as image:
+            fig.savefig(image, format=output.suffix[1:].lower(), dpi=150)
+            with output.open("xb") as destination:
+                destination.write(image.getvalue())
+    finally:
+        plt.close(fig)
+    return output

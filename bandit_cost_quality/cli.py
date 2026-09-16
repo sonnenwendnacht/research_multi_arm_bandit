@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 import sys
 
-from .experiments import canonical_hash, compare, plot_comparison
+from .experiments import (canonical_hash, compare, normalize_plot_path, plot_comparison,
+                          validate_plot_path)
 from .simulator import FEATURE_NAMES, PolicySpec, Scenario, default_policies
 
 
@@ -46,10 +47,14 @@ def main(argv=None):
             command.add_argument("--cost-weight", type=float, default=1.0)
     args = parser.parse_args(argv)
     try:
-        if args.output.exists() or (args.plot and args.plot.exists()):
+        if args.plot:
+            args.plot = normalize_plot_path(args.plot)
+        if args.output.exists() or args.output.is_symlink():
             raise ValueError("output already exists; choose a new path")
         if args.plot and args.output.resolve() == args.plot.resolve():
             raise ValueError("JSON and plot outputs must have different paths")
+        if args.plot:
+            validate_plot_path(args.plot)
         scenario = Scenario.from_dict(load_json(args.scenario))
         if args.command == "compare":
             policies = default_policies()

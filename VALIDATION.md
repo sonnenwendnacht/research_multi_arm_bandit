@@ -8,7 +8,7 @@ Local validation used Python 3.12.3 on Linux with the package versions in [requi
 python -m unittest discover -s tests -v
 ```
 
-Result: 21 test methods passed, including the optional Bayesian-search test with `scikit-optimize` installed. The tests cover:
+Result: 29 test methods passed on Python 3.12.3, including plotting and the optional Bayesian-search test with `scikit-optimize` installed. The tests cover:
 
 - Exact horizons 0, 1, `K-1`, `K`, `K+1`, and 100; exploration exponents 0, 0.5, and 1; both exploration modes.
 - Agreement between action history, reward history, counts, empirical averages, and metric curves.
@@ -18,6 +18,10 @@ Result: 21 test methods passed, including the optional Bayesian-search test with
 - Invalid scenarios, unsupported configurations, duplicate JSON keys, executable text masquerading as JSON, nonfinite values, and numeric overflow handling.
 - Correct aggregate and paired statistics, undefined single-seed standard errors, a noninteractive CLI round trip, existing-output preservation, and no partial artifacts when JSON serialization fails.
 - Disjoint tuning/evaluation seeds and six actual optimizer trials, including an iteration after the initial random evaluations.
+- Extensionless plot paths, collision detection after normalization, direct API
+  no-overwrite behavior, dangling symlink preservation, explicit PNG/SVG/PDF
+  formats, unsupported format rejection, and renderer failures without an empty
+  output file. CI installs both optional extras so these checks are exercised.
 
 When the optional tuning extra is absent, its execution test is explicitly skipped. Historical scripts and pickle contents are not executed by this suite.
 
@@ -25,6 +29,13 @@ An independent review also exercised 162 simulator cases and separate probes
 for policy-order independence, hidden-mean independence, and numerical extremes.
 
 ## Recorded experiments
+
+The checked-in examples and their source hashes are preserved from release
+`03b46c5531f9796560b36718897bc2adaf9c9051`. The September 16 plot-output fix
+changes CLI/plotting source hashes, not the simulation or tuning mathematics.
+The earlier exact-reproduction statements below refer to that recorded release;
+they do not claim its source hashes match the newer output-safety code. No
+historical example score or image was overwritten during this maintenance.
 
 Install the recorded dependencies and package, then use new output paths. The
 checked-in `examples/` files already exist even in a fresh checkout, and the
