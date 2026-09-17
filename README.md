@@ -4,9 +4,17 @@ A reproducible research sandbox for choosing a low-cost action while learning wh
 
 The project began as Junzhe Zong's September–November 2024 student research project, advised by Prof. Osman Yağan (Carnegie Mellon University). The original implementation is preserved in [historical/](historical/README.md). The maintained package and experiments below were added with Codex assistance in September 2026; their results are new demonstrations, not recovered 2024 findings.
 
+[Run a comparison](#run-a-comparison) · [Recorded tradeoffs](#recorded-demonstration) ·
+[Tuning protocol](#optional-bayesian-tuning) · [Validation](VALIDATION.md)
+
+The central question is the tradeoff between action cost and reward shortfall,
+not which policy maximizes reward alone. In the recorded scenario-2 runs,
+threshold UCB has lower mean cost pseudo-regret but higher mean quality
+pseudo-regret than explore-then-commit; neither result establishes a general winner.
+
 ## Run a comparison
 
-Requires Python 3.11 or newer. The core simulator needs only NumPy; after installation, comparisons run locally without network access.
+From the repository root, use Python 3.11 or newer. The core simulator needs only NumPy; after installation, comparisons run locally without network access.
 
 ```bash
 python -m venv .venv
@@ -22,13 +30,9 @@ The default comparison uses seeds 0–19. Set `--seeds 3 4 5` to choose them exp
 
 For plots, install `python -m pip install -e '.[plot]'` and add `--plot results/comparison.png`. A tested Python 3.12 dependency snapshot is provided in [requirements-repro.txt](requirements-repro.txt).
 
-An extensionless plot path such as `--plot results/comparison` explicitly writes
-`results/comparison.png`. Existing plots (including symlinks) and JSON/plot
-destination collisions are rejected before the experiment runs. The plotting
-API also uses exclusive file creation, so it does not overwrite an existing
-destination that appears while a figure is rendering. Rendering failures leave
-no empty plot file. This September 16 maintenance fixes a previously missed
-extensionless-filename overwrite case; the policy calculations are unchanged.
+Extensionless plot paths receive `.png`; existing destinations, symlinks and
+JSON/plot collisions are rejected. See [validation notes](VALIDATION.md) for
+the output-safety checks and maintenance history.
 
 ## What is being measured?
 

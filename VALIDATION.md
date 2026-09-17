@@ -28,6 +28,13 @@ When the optional tuning extra is absent, its execution test is explicitly skipp
 An independent review also exercised 162 simulator cases and separate probes
 for policy-order independence, hidden-mean independence, and numerical extremes.
 
+The September 16 output fix makes Matplotlib's implicit `.png` suffix explicit
+before any existence or JSON/plot alias check. Direct API calls also validate
+the destination, render into memory, and open the final target exclusively.
+Thus a file appearing during rendering is not overwritten, and a renderer
+failure does not leave an empty file. This changes output handling only, not
+the policy calculations.
+
 ## Recorded experiments
 
 The checked-in examples and their source hashes are preserved from release
