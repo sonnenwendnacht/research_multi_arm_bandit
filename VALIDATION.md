@@ -8,7 +8,7 @@ Local validation used Python 3.12.3 on Linux with the package versions in [requi
 python -m unittest discover -s tests -v
 ```
 
-Result: 29 test methods passed on Python 3.12.3, including plotting and the optional Bayesian-search test with `scikit-optimize` installed. The tests cover:
+Result: 31 test methods passed on Python 3.12.3, including plotting and the optional Bayesian-search test with `scikit-optimize` installed. The tests cover:
 
 - Exact horizons 0, 1, `K-1`, `K`, `K+1`, and 100; exploration exponents 0, 0.5, and 1; both exploration modes.
 - Agreement between action history, reward history, counts, empirical averages, and metric curves.
@@ -22,6 +22,9 @@ Result: 29 test methods passed on Python 3.12.3, including plotting and the opti
   no-overwrite behavior, dangling symlink preservation, explicit PNG/SVG/PDF
   formats, unsupported format rejection, and renderer failures without an empty
   output file. CI installs both optional extras so these checks are exercised.
+- Rejection of JSON/plot ancestor collisions in both directions, after `.png`
+  normalization, before either comparison or tuning runs; valid sibling JSON
+  and plot files still succeed.
 
 When the optional tuning extra is absent, its execution test is explicitly skipped. Historical scripts and pickle contents are not executed by this suite.
 
@@ -35,11 +38,21 @@ Thus a file appearing during rendering is not overwritten, and a renderer
 failure does not leave an empty file. This changes output handling only, not
 the policy calculations.
 
+A subsequent September 16 AI-assisted refinement rejects output paths where
+one final filename is an ancestor of the other. Before this check, a command
+such as `--output report --plot report/curve.png` computed the experiment and
+wrote the plot, then failed to create the JSON because `report` had become a
+directory. The reverse relationship also failed after creating the plot.
+The new regression failed for both relationships in both `compare` and `tune`
+before the fix; it now checks that neither computation nor artifact creation
+occurs. This preflight check is not a general two-file transaction guarantee
+against later filesystem failures.
+
 ## Recorded experiments
 
 The checked-in examples and their source hashes are preserved from release
-`03b46c5531f9796560b36718897bc2adaf9c9051`. The September 16 plot-output fix
-changes CLI/plotting source hashes, not the simulation or tuning mathematics.
+`03b46c5531f9796560b36718897bc2adaf9c9051`. The September 16 plot-output fixes
+change CLI/plotting source hashes, not the simulation or tuning mathematics.
 The earlier exact-reproduction statements below refer to that recorded release;
 they do not claim its source hashes match the newer output-safety code. No
 historical example score or image was overwritten during this maintenance.

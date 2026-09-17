@@ -51,9 +51,12 @@ def main(argv=None):
             args.plot = normalize_plot_path(args.plot)
         if args.output.exists() or args.output.is_symlink():
             raise ValueError("output already exists; choose a new path")
-        if args.plot and args.output.resolve() == args.plot.resolve():
-            raise ValueError("JSON and plot outputs must have different paths")
         if args.plot:
+            output_path, plot_path = args.output.resolve(), args.plot.resolve()
+            if output_path == plot_path:
+                raise ValueError("JSON and plot outputs must have different paths")
+            if output_path in plot_path.parents or plot_path in output_path.parents:
+                raise ValueError("JSON and plot outputs cannot be ancestors of one another")
             validate_plot_path(args.plot)
         scenario = Scenario.from_dict(load_json(args.scenario))
         if args.command == "compare":

@@ -143,6 +143,46 @@ class ExperimentTests(unittest.TestCase):
             comparison.assert_not_called()
             self.assertEqual(list(root.iterdir()), [])
 
+    def test_json_plot_ancestor_paths_rejected_before_computation(self):
+        for command in ("compare", "tune"):
+            for json_is_ancestor in (True, False):
+                with self.subTest(command=command, json_is_ancestor=json_is_ancestor), \
+                        tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    if json_is_ancestor:
+                        output, plot = root / "report", root / "report" / "curve"
+                    else:
+                        # Only the normalized plot target is an ancestor here.
+                        output, plot = root / "curve.png" / "report.json", root / "curve"
+                    args = [command, "--scenario", str(ROOT / "scenarios/file_1.json"),
+                            "--output", str(output), "--plot", str(plot)]
+                    with patch("bandit_cost_quality.cli.compare", side_effect=AssertionError("comparison ran")) as comparison, \
+                            patch("bandit_cost_quality.tuning.tune", side_effect=AssertionError("tuning ran")) as tuning, \
+                            patch("bandit_cost_quality.cli.plot_comparison") as plotter, \
+                            redirect_stderr(io.StringIO()) as errors, self.assertRaises(SystemExit) as raised:
+                        main(args)
+                    self.assertEqual(raised.exception.code, 2)
+                    self.assertIn("ancestor", errors.getvalue())
+                    comparison.assert_not_called()
+                    tuning.assert_not_called()
+                    plotter.assert_not_called()
+                    self.assertEqual(list(root.iterdir()), [])
+
+    @unittest.skipUnless(importlib.util.find_spec("matplotlib"), "optional plotting dependency not installed")
+    def test_json_plot_sibling_outputs_succeed(self):
+        for plot_name in ("curve", "curve.png"):
+            with self.subTest(plot_name=plot_name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory) / "new-results"
+                output, plot = root / "report.json", root / plot_name
+                args = ["compare", "--scenario", str(ROOT / "scenarios/file_1.json"),
+                        "--horizon", "2", "--seeds", "0", "--output", str(output),
+                        "--plot", str(plot)]
+                with redirect_stdout(io.StringIO()):
+                    main(args)
+                self.assertEqual(json.loads(output.read_text())["horizon"], 2)
+                self.assertTrue((root / "curve.png").read_bytes().startswith(b"\x89PNG"))
+                self.assertEqual({path.name for path in root.iterdir()}, {"report.json", "curve.png"})
+
     def test_direct_plot_preserves_existing_target_with_or_without_extension(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -31,7 +31,8 @@ The default comparison uses seeds 0–19. Set `--seeds 3 4 5` to choose them exp
 For plots, install `python -m pip install -e '.[plot]'` and add `--plot results/comparison.png`. A tested Python 3.12 dependency snapshot is provided in [requirements-repro.txt](requirements-repro.txt).
 
 Extensionless plot paths receive `.png`; existing destinations, symlinks and
-JSON/plot collisions are rejected. See [validation notes](VALIDATION.md) for
+JSON/plot collisions (including one output nested inside the other) are rejected
+before computation. See [validation notes](VALIDATION.md) for
 the output-safety checks and maintenance history.
 
 ## What is being measured?
